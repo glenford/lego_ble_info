@@ -40,11 +40,33 @@ fn lego_button_state(t: u8) -> &'static str {
 }
 
 fn lego_device_capabilities(t: u8) -> String {
-  format!("{}|{}|{}|{}",
-    if t & 0x01 > 0 { "Supports Central Role" } else { "" },
-    if t & 0x02 > 0 { "Supports Peripheral Role" } else { ""},
-    if t & 0x04 > 0 { "Supports LPF2 devices" } else { ""},
-    if t & 0x08 > 0 { "Act as Remote Controller" } else { ""} )
+    let mut capabilities = Vec::new();
+    if t & 0x01 > 0 { capabilities.push( "Supports Central Role" ) };
+    if t & 0x02 > 0 { capabilities.push( "Supports Peripheral Role" ) };
+    if t & 0x04 > 0 { capabilities.push( "Supports LPF2 devices" ) };
+    if t & 0x08 > 0 { capabilities.push( "Act as Remote Controller" ) };
+    capabilities.join(",")
+}
+
+fn lego_last_network_id(t: u8) -> String {
+  match t {
+      0xFF => "Don't Care".to_string(),
+      0xFE => "Disable H/W Network".to_string(),
+      0xFD => "RSSI Dependent".to_string(),
+      0xFC => "NOT Locked".to_string(),
+      0xFB => "Locked".to_string(),
+      0x00 => "None (Unknown)".to_string(),
+      _ => format!("{}",t)
+  }
+}
+
+fn lego_status_decode(t: u8) -> String {
+    let mut status = Vec::new();
+    if t & 0x01 > 0 { status.push("Can be peripheral") };
+    if t & 0x02 > 0 { status.push("Can be central") };
+    if t & 0x20 > 0 { status.push("Request Window") };
+    if t & 0x40 > 0 { status.push("Request Connect") };
+    status.join(",")
 }
 
 async fn get_central(manager: &Manager) -> Adapter {
@@ -84,8 +106,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                           println!("  Device: {:?}", lego_system_type(manu_data[1]));
                           println!("  Button: {:?}", lego_button_state(manu_data[0]));
                           println!("  Device Capabilities: {:?}", lego_device_capabilities(manu_data[2]));
-                          println!("  Last ID: {:?}", manu_data[3]);
-                          println!("  Status: {:?}", manu_data[4]);
+                          println!("  Last ID: {:?}", lego_last_network_id(manu_data[3]));
+                          println!("  Status: {:?}", lego_status_decode(manu_data[4]));
                           println!("  Option: {:?}", manu_data[5]);
                         },
                         _ => (), // ignore
